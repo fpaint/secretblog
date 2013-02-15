@@ -12,7 +12,8 @@ class PluginSecretblog extends Plugin {
       ),
       'module' => array(
         'ModuleTopic',
-        'ModuleBlog'
+        'ModuleBlog',
+        'ModuleStream'
       ),
       'mapper' => array(
         'ModuleTopic_MapperTopic',
