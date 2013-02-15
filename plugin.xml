@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+    <name>
+        <lang name="default">Secret blogs</lang>
+        <lang name="russian">Тайные блоги</lang>
+    </name>
+    <author>
+        <lang name="default">Mannelig</lang>
+        <lang name="russian">Mannelig</lang>
+    </author>
+    <homepage>http://blogotver.ru</homepage>
+    <version>0.1</version>
+    <requires>
+        <livestreet>1.0.2</livestreet>
+    </requires>
+    <description>
+        <lang name="default">Adds a new type of blogs</lang>
+        <lang name="russian">Добавляет новый тип блогов - тайные</lang>
+    </description>
+</plugin>
