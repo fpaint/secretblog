@@ -91,6 +91,110 @@ class PluginSecretblog_ActionBlog extends PluginSecretblog_Inherit_ActionBlog {
     $this->Hook_Run('check_blog_fields', array('bOk' => &$bOk));
     return $bOk;
   }
+  
+	/**
+	 * Подключение/отключение к блогу
+	 *
+	 */
+	protected function AjaxBlogJoin() {
+		/**
+		 * Устанавливаем формат Ajax ответа
+		 */
+		$this->Viewer_SetResponseAjax('json');
+		/**
+		 * Пользователь авторизован?
+		 */
+		if (!$this->oUserCurrent) {
+			$this->Message_AddErrorSingle($this->Lang_Get('need_authorization'),$this->Lang_Get('error'));
+			return;
+		}
+		/**
+		 * Блог существует?
+		 */
+		$idBlog=getRequestStr('idBlog',null,'post');
+		if (!($oBlog=$this->Blog_GetBlogById($idBlog))) {
+			$this->Message_AddErrorSingle($this->Lang_Get('system_error'),$this->Lang_Get('error'));
+			return;
+		}
+		/**
+		 * Проверяем тип блога
+		 */
+		if (!in_array($oBlog->getType(),array('open','close','secret'))) {
+			$this->Message_AddErrorSingle($this->Lang_Get('blog_join_error_invite'),$this->Lang_Get('error'));
+			return;
+		}
+		/**
+		 * Получаем текущий статус пользователя в блоге
+		 */
+		$oBlogUser=$this->Blog_GetBlogUserByBlogIdAndUserId($oBlog->getId(),$this->oUserCurrent->getId());
+		if (!$oBlogUser || ($oBlogUser->getUserRole()<ModuleBlog::BLOG_USER_ROLE_GUEST && $oBlog->getType()=='close')) {
+			if ($oBlog->getOwnerId()!=$this->oUserCurrent->getId()) {
+				/**
+				 * Присоединяем юзера к блогу
+				 */
+				$bResult=false;
+				if($oBlogUser) {
+					$oBlogUser->setUserRole(ModuleBlog::BLOG_USER_ROLE_USER);
+					$bResult = $this->Blog_UpdateRelationBlogUser($oBlogUser);
+				} elseif(in_array($oBlog->getType(), array('open', 'secret'))) {
+					$oBlogUserNew=Engine::GetEntity('Blog_BlogUser');
+					$oBlogUserNew->setBlogId($oBlog->getId());
+					$oBlogUserNew->setUserId($this->oUserCurrent->getId());
+					$oBlogUserNew->setUserRole(ModuleBlog::BLOG_USER_ROLE_USER);
+					$bResult = $this->Blog_AddRelationBlogUser($oBlogUserNew);
+				}
+				if ($bResult) {
+					$this->Message_AddNoticeSingle($this->Lang_Get('blog_join_ok'),$this->Lang_Get('attention'));
+					$this->Viewer_AssignAjax('bState',true);
+					/**
+					 * Увеличиваем число читателей блога
+					 */
+					$oBlog->setCountUser($oBlog->getCountUser()+1);
+					$this->Blog_UpdateBlog($oBlog);
+					$this->Viewer_AssignAjax('iCountUser',$oBlog->getCountUser());
+					/**
+					 * Добавляем событие в ленту
+					 */
+					$this->Stream_write($this->oUserCurrent->getId(), 'join_blog', $oBlog->getId());
+					/**
+					 * Добавляем подписку на этот блог в ленту пользователя
+					 */
+					$this->Userfeed_subscribeUser($this->oUserCurrent->getId(), ModuleUserfeed::SUBSCRIBE_TYPE_BLOG, $oBlog->getId());
+				} else {
+					$sMsg=($oBlog->getType()=='close')
+						? $this->Lang_Get('blog_join_error_invite')
+						: $this->Lang_Get('system_error');
+					$this->Message_AddErrorSingle($sMsg,$this->Lang_Get('error'));
+					return;
+				}
+			} else {
+				$this->Message_AddErrorSingle($this->Lang_Get('blog_join_error_self'),$this->Lang_Get('attention'));
+				return;
+			}
+		}
+		if ($oBlogUser && $oBlogUser->getUserRole()>ModuleBlog::BLOG_USER_ROLE_GUEST) {
+			/**
+			 * Покидаем блог
+			 */
+			if ($this->Blog_DeleteRelationBlogUser($oBlogUser)) {
+				$this->Message_AddNoticeSingle($this->Lang_Get('blog_leave_ok'),$this->Lang_Get('attention'));
+				$this->Viewer_AssignAjax('bState',false);
+				/**
+				 * Уменьшаем число читателей блога
+				 */
+				$oBlog->setCountUser($oBlog->getCountUser()-1);
+				$this->Blog_UpdateBlog($oBlog);
+				$this->Viewer_AssignAjax('iCountUser',$oBlog->getCountUser());
+				/**
+				 * Удаляем подписку на этот блог в ленте пользователя
+				 */
+				$this->Userfeed_unsubscribeUser($this->oUserCurrent->getId(), ModuleUserfeed::SUBSCRIBE_TYPE_BLOG, $oBlog->getId());
+			} else {
+				$this->Message_AddErrorSingle($this->Lang_Get('system_error'),$this->Lang_Get('error'));
+				return;
+			}
+		}
+	}  
 
 }
 

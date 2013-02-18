@@ -131,6 +131,27 @@ class PluginSecretblog_ModuleBlog_MapperBlog extends PluginSecretblog_Inherit_Mo
 		}
 		return $aReturn;
 	}
+  
+  
+	/**
+	 * Возвращает полный список закрытых блогов
+	 *
+	 * @return array
+	 */
+	public function GetCloseBlogs() {
+		$sql = "SELECT b.blog_id										
+				FROM ".Config::Get('db.table.blog')." as b					
+				WHERE b.blog_type IN('close', 'secret')
+			;";
+		$aReturn=array();
+		if ($aRows=$this->oDb->select($sql)) {
+			foreach ($aRows as $aRow) {
+				$aReturn[]=$aRow['blog_id'];
+			}
+		}
+		return $aReturn;
+	}
+  
 	
 }
 ?>

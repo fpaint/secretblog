@@ -45,6 +45,45 @@ class PluginSecretblog_ModuleBlog extends PluginSecretblog_Inherit_ModuleBlog {
 		$aResult=$this->GetBlogsByFilter(array('exclude_type'=>array('personal','secret'),'user_owner_id'=>$sUserId),array('blog_rating'=>'desc'),1,$iLimit);
 		return $aResult['collection'];
 	}
+  
+	/**
+	 * Получаем массив идентификаторов блогов, которые являются закрытыми для пользователя
+	 *
+	 * @param  ModuleUser_EntityUser|null $oUser	Пользователь
+	 * @return array
+	 */
+	public function GetInaccessibleBlogsByUser($oUser=null) {
+		if ($oUser&&$oUser->isAdministrator()) {
+			return array();
+		}
+		$sUserId=$oUser ? $oUser->getId() : 'guest';
+		if (false === ($aCloseBlogs = $this->Cache_Get("blog_inaccessible_user_{$sUserId}"))) {
+			$aCloseBlogs = $this->oMapperBlog->GetCloseBlogs();
+			if($oUser) {
+				/**
+				 * Получаем массив идентификаторов блогов,
+				 * которые являются откытыми для данного пользователя
+				 */
+				$aOpenBlogs=$this->GetBlogUsersByUserId($oUser->getId(),null,true);
+				/**
+				 * Получаем закрытые блоги, где пользователь является автором
+				 */
+				$aOwnerBlogs=$this->GetBlogsByFilter(array('type'=>array('close', 'secret'),'user_owner_id'=>$oUser->getId()),array(),1,100,array());
+				$aOwnerBlogs=array_keys($aOwnerBlogs['collection']);
+				$aCloseBlogs=array_diff($aCloseBlogs,$aOpenBlogs,$aOwnerBlogs);
+			}
+			/**
+			 * Сохраняем в кеш
+			 */
+			if ($oUser) {
+				$this->Cache_Set($aCloseBlogs, "blog_inaccessible_user_{$sUserId}", array('blog_new','blog_update',"blog_relation_change_{$oUser->getId()}"), 60*60*24);
+			} else {
+				$this->Cache_Set($aCloseBlogs, "blog_inaccessible_user_{$sUserId}", array('blog_new','blog_update'), 60*60*24*3);
+			}
+		}
+		return $aCloseBlogs;
+	}
+	
 	
 }
 ?>

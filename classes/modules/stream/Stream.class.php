@@ -3,7 +3,7 @@
 class PluginSecretblog_ModuleStream extends PluginSecretblog_Inherit_ModuleStream {
 
   protected function isSecredBlog($iBlogId) {
-    $oBlog = $this->Blog_GetBlogById($iTargetId);
+    $oBlog = $this->Blog_GetBlogById($iBlogId);
     if($oBlog and $oBlog->getType() == 'secret') {
       return true;
     }  
@@ -22,8 +22,8 @@ class PluginSecretblog_ModuleStream extends PluginSecretblog_Inherit_ModuleStrea
     } else if($aType['related'] == 'comment') {
       $oComment = $this->Comment_GetCommentById($iTargetId);
       if($oComment->getTargetType() == 'topic') {
-        return $this->isSecredBlog($oTopic->getBlogId());
-      }      
+        return $this->isSecredBlog($oComment->getTargetParentId());
+      }
     }
     return false;
   }
