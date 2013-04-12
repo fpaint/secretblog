@@ -92,6 +92,51 @@ class PluginSecretblog_ActionBlog extends PluginSecretblog_Inherit_ActionBlog {
     return $bOk;
   }
   
+  protected function canViewSecrets($oUser, $oBlog) {
+    if($oBlog->getType()=='secret') {
+      if($oUser == null or $oUser->getRating() < $oBlog->getLimitRatingTopic()) {
+        return false;
+      }
+    }
+    return true;
+  }
+  
+  protected function EventShowBlog() {
+    $sBlogUrl=$this->sCurrentEvent;
+ 		if (!($oBlog=$this->Blog_GetBlogByUrl($sBlogUrl))) {
+			return parent::EventNotFound();
+		}
+		if($this->canViewSecrets($this->oUserCurrent, $oBlog) == false) {
+		  return parent::EventNotFound();
+		}
+    return parent::EventShowBlog();
+  }
+  
+  protected function EventShowTopic() {
+		$sBlogUrl='';
+		if ($this->GetParamEventMatch(0,1)) {
+			// из коллективного блога
+			$sBlogUrl=$this->sCurrentEvent;
+			$iTopicId=$this->GetParamEventMatch(0,1);
+			$this->sMenuItemSelect='blog';
+		} else {
+			// из персонального блога
+			$iTopicId=$this->GetEventMatch(1);
+			$this->sMenuItemSelect='log';
+		}
+		$this->sMenuSubItemSelect='';
+		/**
+		 * Проверяем есть ли такой топик
+		 */
+		if (!($oTopic=$this->Topic_GetTopicById($iTopicId))) {
+			return parent::EventNotFound();
+		}
+		if($this->canViewSecrets($this->oUserCurrent, $oTopic->getBlog()) == false) {
+		  return parent::EventNotFound();
+		}
+    return parent::EventShowTopic();
+  }
+  
 	/**
 	 * Подключение/отключение к блогу
 	 *

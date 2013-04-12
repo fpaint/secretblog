@@ -84,6 +84,64 @@ class PluginSecretblog_ModuleBlog extends PluginSecretblog_Inherit_ModuleBlog {
 		return $aCloseBlogs;
 	}
 	
-	
+	/**
+	 * Получает отношения юзера к блогам(состоит в блоге или нет)
+	 *
+	 * @param int $sUserId	ID пользователя
+	 * @param int|null $iRole	Роль пользователя в блоге
+	 * @param bool $bReturnIdOnly	Возвращать только ID блогов или полные объекты
+	 * @return array
+	 */
+	public function GetBlogUsersByUserId($sUserId,$iRole=null,$bReturnIdOnly=false) {
+		$aFilter=array(
+			'user_id'=> $sUserId
+		);
+		if($iRole!==null) {
+			$aFilter['user_role']=$iRole;
+		}
+		$s=serialize($aFilter);
+		if (false === ($data = $this->Cache_Get("blog_relation_user_by_filter_$s"))) {
+			$data = $this->oMapperBlog->GetBlogUsers($aFilter);
+			$this->Cache_Set($data, "blog_relation_user_by_filter_$s", array("blog_update", "blog_relation_change_{$sUserId}"), 60*60*24*3);
+		}
+		/**
+		 * Достаем дополнительные данные, для этого формируем список блогов и делаем мульти-запрос
+		 */
+		$aBlogId=array();
+		$blogs = array();
+		if ($data) {
+			foreach ($data as $oBlogUser) {
+				$aBlogId[]=$oBlogUser->getBlogId();
+			}
+			/**
+			 * Если указано возвращать полные объекты
+			 */
+			if(!$bReturnIdOnly) {
+				$aUsers=$this->User_GetUsersAdditionalData($sUserId);
+				$aBlogs=$this->Blog_GetBlogsAdditionalData($aBlogId);
+				$forCurrentUser = ($this->oUserCurrent and $sUserId == $this->oUserCurrent->getId());
+				foreach ($data as $oBlogUser) {
+				  $blog_id = $oBlogUser->getBlogId();
+ 				  if(isset($aBlogs[$blog_id]) and $aBlogs[$blog_id]->getType() == 'secret' and $forCurrentUser == false) { // фильтр, скрывающий тайные блоги от посторонних
+ 				    continue;
+ 				  }
+					if (isset($aUsers[$oBlogUser->getUserId()])) {
+						$oBlogUser->setUser($aUsers[$oBlogUser->getUserId()]);
+					} else {
+						$oBlogUser->setUser(null);
+					}
+					if (isset($aBlogs[$blog_id])) {  					
+						$oBlogUser->setBlog($aBlogs[$blog_id]);
+					} else {
+						$oBlogUser->setBlog(null);
+					}
+					$blogs[] = $oBlogUser;
+				}
+				
+			}
+		}
+		return ($bReturnIdOnly) ? $aBlogId : $blogs;
+	}
+
 }
 ?>
