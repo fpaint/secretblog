@@ -142,6 +142,26 @@ class PluginSecretblog_ModuleBlog extends PluginSecretblog_Inherit_ModuleBlog {
 		}
 		return ($bReturnIdOnly) ? $aBlogId : $blogs;
 	}
+	
+	/**
+	 * Получает список блогов по хозяину
+	 *
+	 * @param int $sUserId	ID пользователя
+	 * @param bool $bReturnIdOnly	Возвращать только ID блогов или полные объекты
+	 * @return array
+	 */
+	public function GetBlogsByOwnerId($sUserId,$bReturnIdOnly=false) {
+		$forCurrentUser = ($this->oUserCurrent and $sUserId == $this->oUserCurrent->getId());
+		$data = $this->oMapperBlog->GetBlogsByOwnerId($sUserId, $forCurrentUser);
+		/**
+		 * Возвращаем только иденитификаторы
+		 */
+		if($bReturnIdOnly) return $data;
+
+		$data=$this->GetBlogsAdditionalData($data);
+		return $data;
+	}
+	
 
 }
 ?>

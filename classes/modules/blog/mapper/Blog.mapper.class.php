@@ -29,7 +29,8 @@ class PluginSecretblog_ModuleBlog_MapperBlog extends PluginSecretblog_Inherit_Mo
 	 * @param int $sUserId ID пользователя
 	 * @return array
 	 */
-	public function GetBlogsByOwnerId($sUserId) {
+	public function GetBlogsByOwnerId($sUserId, $forCurrentUser = false) {
+	  $blogTypes = $forCurrentUser ? "'personal'" : "'personal', 'secret'";
 		$sql = "SELECT 
 			b.blog_id			 
 			FROM 
@@ -37,7 +38,7 @@ class PluginSecretblog_ModuleBlog_MapperBlog extends PluginSecretblog_Inherit_Mo
 			WHERE 
 				b.user_owner_id = ? 
 				AND
-				b.blog_type NOT IN ('personal', 'secret')
+				b.blog_type NOT IN (".$blogTypes.")
 				";
 		$aBlogs=array();
 		if ($aRows=$this->oDb->select($sql,$sUserId)) {
@@ -112,6 +113,7 @@ class PluginSecretblog_ModuleBlog_MapperBlog extends PluginSecretblog_Inherit_Mo
 	 * @return array
 	 */
 	public function GetBlogsRatingSelf($sUserId,$iLimit) {
+
 		$sql = "SELECT 
 					b.*													
 				FROM 					
@@ -119,7 +121,7 @@ class PluginSecretblog_ModuleBlog_MapperBlog extends PluginSecretblog_Inherit_Mo
 				WHERE 						
 					b.user_owner_id = ?d
 					AND				
-					b.blog_type NOT IN ('personal','secret')
+					b.blog_type NOT IN ('personal', 'secret')
 				ORDER by b.blog_rating desc
 				LIMIT 0, ?d 
 			;";
